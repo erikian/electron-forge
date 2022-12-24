@@ -199,6 +199,8 @@ export const listrPackage = ({
 
           const pruneEnabled = !('prune' in forgeConfig.packagerConfig) || forgeConfig.packagerConfig.prune;
 
+          const beforeCopyHooks = resolveHooks(forgeConfig.packagerConfig.beforeCopy, ctx.dir);
+
           const afterCopyHooks: HookFunction[] = [
             async (buildPath, electronVersion, platform, arch, done) => {
               signalDone(signalCopyDone, { platform, arch });
@@ -245,6 +247,7 @@ export const listrPackage = ({
               signalPackageDone.get(getTargetKey({ platform: pPlatform, arch: pArch }))?.pop()?.();
               done();
             },
+            ...resolveHooks(forgeConfig.packagerConfig.afterComplete, ctx.dir),
           ];
 
           const afterPruneHooks = [];
@@ -268,6 +271,12 @@ export const listrPackage = ({
 
           type PackagerArch = Exclude<ForgeArch, 'arm'>;
 
+          const beforeAsarHooks = resolveHooks(forgeConfig.packagerConfig.beforeAsar, ctx.dir);
+          const afterAsarHooks = resolveHooks(forgeConfig.packagerConfig.afterAsar, ctx.dir);
+
+          const beforeCopyExtraResources = resolveHooks(forgeConfig.packagerConfig.beforeCopyExtraResources, ctx.dir);
+          const afterCopyExtraResources = resolveHooks(forgeConfig.packagerConfig.afterCopyExtraResources, ctx.dir);
+
           const packageOpts: packager.Options = {
             asar: false,
             overwrite: true,
@@ -279,7 +288,12 @@ export const listrPackage = ({
             platform,
             afterFinalizePackageTargets: sequentialFinalizePackageTargetsHooks(afterFinalizePackageTargetsHooks),
             afterComplete: sequentialHooks(afterCompleteHooks),
+            beforeCopy: sequentialHooks(beforeCopyHooks),
             afterCopy: sequentialHooks(afterCopyHooks),
+            beforeAsar: sequentialHooks(beforeAsarHooks),
+            afterAsar: sequentialHooks(afterAsarHooks),
+            beforeCopyExtraResources: sequentialHooks(beforeCopyExtraResources),
+            afterCopyExtraResources: sequentialHooks(afterCopyExtraResources),
             afterExtract: sequentialHooks(afterExtractHooks),
             afterPrune: sequentialHooks(afterPruneHooks),
             out: calculatedOutDir,
